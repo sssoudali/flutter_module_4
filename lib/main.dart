@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'user_screen.dart';
+import 'holiday_calendar_screen.dart';
 
-void main(){
- runApp(ProviderScope(child: MyApp()));
-
+void main() {
+  runApp(ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -12,7 +11,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: UserScreen(),
+      title: 'Holiday Calendar',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: HolidayCalendarScreen(), // Set this as the home screen
     );
   }
 }
