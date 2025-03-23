@@ -10,10 +10,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Holiday Calendar',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: HolidayCalendarScreen(), // Set this as the home screen
+      debugShowCheckedModeBanner: true,
+      title: 'Calendar',
+      theme: ThemeData(primarySwatch: Colors.amber),
+      home: HolidayCalendarScreen(), 
     );
   }
 }
