@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'holiday_provider.dart';
-
+import 'holiday_model.dart';
 
 class HolidayScreen extends ConsumerStatefulWidget {
   @override
@@ -13,39 +13,49 @@ class _HolidayScreenState extends ConsumerState<HolidayScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, List<String>> _holidayEvents = {};
+  bool _holidaysLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHolidays(_focusedDay.year);
+  }
+
+  void _fetchHolidays(int year) async {
+    final holidays = await ref.read(holidayProvider(year).future);
+    setState(() {
+      _holidayEvents.clear();
+      for (var holiday in holidays) {
+        DateTime date = DateTime.parse(holiday.date);
+        date = DateTime(date.year, date.month, date.day); // Normalize
+
+        if (_holidayEvents.containsKey(date)) {
+          _holidayEvents[date]!.add(holiday.localName);
+        } else {
+          _holidayEvents[date] = [holiday.localName];
+        }
+      }
+      _holidaysLoaded = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final holidayAsyncValue = ref.watch(holidayProvider);
-
     return Scaffold(
       appBar: AppBar(title: Text('Holiday Calendar')),
-      body: holidayAsyncValue.when(
-        data: (holidays) {
-          _holidayEvents.clear(); // Reset events before updating
-
-          for (var holiday in holidays) {
-            DateTime holidayDate = DateTime.parse(holiday.date);
-            holidayDate = DateTime(holidayDate.year, holidayDate.month, holidayDate.day); // Normalize date
-            
-            if (_holidayEvents.containsKey(holidayDate)) {
-              _holidayEvents[holidayDate]!.add(holiday.localName);
-            } else {
-              _holidayEvents[holidayDate] = [holiday.localName];
-            }
-          }
-
-          return Column(
-            children: [
-              Expanded( 
-                child: TableCalendar(
+      body: !_holidaysLoaded
+          ? Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                TableCalendar(
                   focusedDay: _focusedDay,
                   firstDay: DateTime(2020),
                   lastDay: DateTime(2030),
                   calendarFormat: CalendarFormat.month,
+                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                   eventLoader: (day) {
-                    DateTime normalizedDay = DateTime(day.year, day.month, day.day);
-                    return _holidayEvents[normalizedDay] ?? [];
+                    DateTime normalized = DateTime(day.year, day.month, day.day);
+                    return _holidayEvents[normalized] ?? [];
                   },
                   onDaySelected: (selectedDay, focusedDay) {
                     setState(() {
@@ -53,38 +63,39 @@ class _HolidayScreenState extends ConsumerState<HolidayScreen> {
                       _focusedDay = focusedDay;
                     });
                   },
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _selectedDay == null
-                    ? "Select a date to see holidays"
-                    : "Holidays on ${_selectedDay!.toLocal().toString().split(' ')[0]}",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _selectedDay != null ? (_holidayEvents[_selectedDay] ?? []).length : 0,
-                  itemBuilder: (context, index) {
-                    return Card(
-                      margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: ListTile(
-                        leading: Icon(Icons.event, color: Colors.blue),
-                        title: Text(
-                          _holidayEvents[_selectedDay]![index],
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    );
+                  onPageChanged: (focusedDay) {
+                    _focusedDay = focusedDay;
+                    _fetchHolidays(focusedDay.year);
                   },
                 ),
-              ),
-            ],
-          );
-        },
-        loading: () => Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-      ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: _buildEventList(),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildEventList() {
+    final selected = _selectedDay != null
+        ? DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day)
+        : null;
+
+    final events = selected != null ? _holidayEvents[selected] ?? [] : [];
+
+    if (events.isEmpty) {
+      return Center(child: Text('No holidays on this day.'));
+    }
+
+    return ListView.builder(
+      itemCount: events.length,
+      itemBuilder: (context, index) {
+        return ListTile(
+          leading: Icon(Icons.celebration),
+          title: Text(events[index]),
+        );
+      },
     );
   }
 }

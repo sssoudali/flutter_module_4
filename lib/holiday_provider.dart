@@ -3,9 +3,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'holiday_model.dart';
 
-final holidayProvider = FutureProvider<List<Holiday>>((ref) async {
+final holidayProvider = FutureProvider.family<List<Holiday>, int>((ref, year) async {
   final response = await http.get(
-    Uri.parse('https://date.nager.at/api/v3/PublicHolidays/2024/US'),
+    Uri.parse('https://date.nager.at/api/v3/PublicHolidays/$year/US'),
   );
 
   if (response.statusCode == 200) {
